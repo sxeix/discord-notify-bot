@@ -47,9 +47,9 @@ async def on_message(message):
 async def notify(ctx, arg):
     if ctx.guild.name not in servers:
         servers[ctx.guild.name] = dict()
-    if ctx.author.id not in servers[ctx.guild.name]:
-        servers[ctx.guild.name][ctx.author.id] =[]
-    servers[ctx.guild.name][ctx.author.id].append(arg.lower())
+    if str(ctx.author.id) not in servers[ctx.guild.name]:
+        servers[ctx.guild.name][str(ctx.author.id)] =[]
+    servers[ctx.guild.name][str(ctx.author.id)].append(arg.lower())
     await ctx.send(
         "I have stored your keyphrase, '{keyphrase}'"
         .format(
@@ -62,7 +62,6 @@ async def notify(ctx, arg):
 @tasks.loop(seconds=10)
 async def updateBackup():
     global unsavedChanges
-    print(unsavedChanges)
     if unsavedChanges:
         with open("notify.json", 'w') as f:
             json.dump(servers, f, indent=4)
