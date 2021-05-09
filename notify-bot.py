@@ -16,7 +16,7 @@ async def on_message(message):
         for user in servers[message.guild.id]:
             for keyword in servers[message.guild.id][user]:
                 if keyword in message.content.lower():
-                    userId ="<@{id}>".format(id=user.id)
+                    userId ="<@{id}>".format(id=user)
                     await message.reply(
                         "'{keyword}', was mentioned {user}"
                         .format(
@@ -24,16 +24,17 @@ async def on_message(message):
                             user = userId
                             )
                         )
-                    print(user, servers[message.guild.id][user])
+                    # print(user, servers[message.guild.id][user])
     await client.process_commands(message)
 
 @client.command(description="Enter a keyword or keyphrase you would like to be notifed about use quotations for phrases longer than one word")
 async def notify(ctx, arg):
     if ctx.guild.id not in servers:
         servers[ctx.guild.id] = dict()
-    if ctx.author not in servers[ctx.guild.id]:
-        servers[ctx.guild.id][ctx.author] =[]
-    servers[ctx.guild.id][ctx.author].append(arg.lower())
+    if ctx.author.id not in servers[ctx.guild.id]:
+        servers[ctx.guild.id][ctx.author.id] =[]
+    servers[ctx.guild.id][ctx.author.id].append(arg.lower())
+    # print(servers)
     await ctx.send(
         "I have stored your keyphrase, '{keyphrase}'"
         .format(
