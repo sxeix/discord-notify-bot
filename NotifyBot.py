@@ -1,17 +1,18 @@
 import discord
 import json
 import os.path
+import DatabaseController
 from discord.ext import commands, tasks
 
 def loadServers():
     s = dict()
-    if os.path.isfile("notify.json"):
-        with open("notify.json", 'r') as f:
+    if os.path.isfile(os.path.join('resources', 'notify.json')):
+        with open(os.path.join('resources', 'notify.json'), 'r') as f:
             s = json.load(f)
     return s
 
 def fetchToken():
-    with open('token') as file: 
+    with open(os.path.join('resources', 'token')) as file: 
         token = file.readline()
     return token
 
@@ -24,6 +25,8 @@ async def on_ready():
     updateBackup.start()
     print(servers)
     print("Notify bot is active")
+    DatabaseController.connectDatabase()
+    DatabaseController.printTable()
 
 @client.event
 async def on_message(message):
@@ -43,7 +46,7 @@ async def on_message(message):
                         )
     await client.process_commands(message)
 
-@client.command(description="Enter a keyword or keyphrase you would like to be notifed about use quotations for phrases longer than one word")
+@client.command(description="Enter a keyword or keyphrase you would like to be notifed about. Use quotations for phrases longer than one word")
 async def notify(ctx, arg):
     if ctx.guild.name not in servers:
         servers[ctx.guild.name] = dict()
@@ -59,7 +62,7 @@ async def notify(ctx, arg):
     global unsavedChanges
     unsavedChanges = True
     
-@tasks.loop(seconds=10)
+@tasks.loop(seconds=60)
 async def updateBackup():
     global unsavedChanges
     if unsavedChanges:
