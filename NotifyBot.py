@@ -66,7 +66,7 @@ async def notify(ctx, arg):
 async def updateBackup():
     global unsavedChanges
     if unsavedChanges:
-        with open("notify.json", 'w') as f:
+        with open(os.path.join('resources', 'notify.json'), 'w') as f:
             json.dump(servers, f, indent=4)
         print("Changes saved")
         unsavedChanges = False
