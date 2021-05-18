@@ -4,71 +4,64 @@ import os.path
 import DatabaseController
 from discord.ext import commands, tasks
 
-def loadServers():
-    s = dict()
-    if os.path.isfile(os.path.join('resources', 'notify.json')):
-        with open(os.path.join('resources', 'notify.json'), 'r') as f:
-            s = json.load(f)
-    return s
-
-def fetchToken():
+def fetch_token():
     with open(os.path.join('resources', 'token')) as file: 
         token = file.readline()
     return token
 
+def construct_user_id(id):
+    return "<@{x}>".format(x=id)
+
 client = commands.Bot(command_prefix= '!')
-servers = loadServers()
 unsavedChanges = False
 
 @client.event
 async def on_ready():
     updateBackup.start()
-    print(servers)
     print("Notify bot is active")
-    DatabaseController.connectDatabase()
-    DatabaseController.printTable()
+    DatabaseController.connect_database()
 
 @client.event
 async def on_message(message):
     if message.author == client.user:
         return
-    if message.guild.name in servers:
-        for user in servers[message.guild.name]:
-            for keyword in servers[message.guild.name][user]:
-                if keyword in message.content.lower():
-                    userId ="<@{id}>".format(id=user)
-                    await message.reply(
-                        "'{keyword}', was mentioned {user}"
-                        .format(
-                            keyword = keyword, 
-                            user = userId
-                            )
-                        )
+    
+    response =  DatabaseController.fetch_server_keywords(message.guild.name)  
+    
+    if response == None:
+        return 
+    keywords = []
+    toNotify = []
+    for row in response:
+        if row[1] in message.content.lower():
+            toNotify.append(construct_user_id(row[0]))
+            keywords.append(row[1])
+    
+    if len(keywords) > 0 and len(toNotify) > 0:        
+        await message.reply(
+            "'{keywords}', was mentioned {users}"
+            .format(
+                keywords = ", ".join(list(set(keywords))), 
+                users = " ".join(toNotify)
+                )
+        )
+        
     await client.process_commands(message)
 
 @client.command(description="Enter a keyword or keyphrase you would like to be notifed about. Use quotations for phrases longer than one word")
 async def notify(ctx, arg):
-    if ctx.guild.name not in servers:
-        servers[ctx.guild.name] = dict()
-    if str(ctx.author.id) not in servers[ctx.guild.name]:
-        servers[ctx.guild.name][str(ctx.author.id)] =[]
-    servers[ctx.guild.name][str(ctx.author.id)].append(arg.lower())
+    if len(arg) > 255:
+        return
+    DatabaseController.insert_keyword(ctx.guild.name, ctx.author.id, arg.lower())
     await ctx.send(
         "I have stored your keyphrase, '{keyphrase}'"
         .format(
             keyphrase = arg
             )
         )
-    global unsavedChanges
-    unsavedChanges = True
     
 @tasks.loop(seconds=60)
 async def updateBackup():
-    global unsavedChanges
-    if unsavedChanges:
-        with open(os.path.join('resources', 'notify.json'), 'w') as f:
-            json.dump(servers, f, indent=4)
-        print("Changes saved")
-        unsavedChanges = False
+    print("60 second indication")
 
-client.run(fetchToken())
+client.run(fetch_token())
